@@ -6,7 +6,7 @@ class FileReadError(Exception):
 
 
 class FileWriteError(Exception):
-    """Ошибка записи в файл"""
+    """Ошибка записи файла"""
     pass
 
 

@@ -1,27 +1,18 @@
 # controller.py
 
-from view import (
-    show_menu,
-    display_contacts,
-    get_add_contact_input,
-    get_edit_contact_input,
-    get_search_query,
-    get_delete_contact_id,
-    show_error,
-    show_success
-)
-from utils import load_contacts, save_contacts
-from exceptions import ContactNotFoundError, InvalidContactDataError, FileReadError, FileWriteError
-from model import Contact
+from model import PhoneBook
+from view import *
+from exceptions import *
 
 
 class PhoneBookController:
     def __init__(self):
-        self.contacts = []
+        self.phonebook = PhoneBook()
+        self.changed = False
         try:
-            self.contacts = load_contacts()
+            self.phonebook.load_contacts()
         except FileReadError as e:
-            show_error(str(e))
+            show_error(e)
 
     def run(self):
         while True:
@@ -29,72 +20,54 @@ class PhoneBookController:
 
             match choice:
                 case "1":
-                    display_contacts(self.contacts)
+                    show_all_contacts(self.phonebook.get_all_contacts())
                 case "2":
-                    self.add_contact()
+                    try:
+                        name, phone, comment = input_contact_data()
+                        self.phonebook.add_contact(name, phone, comment)
+                        self.changed = True
+                        print("Контакт успешно добавлен.")
+                    except InvalidContactDataError as e:
+                        show_error(e)
                 case "3":
-                    self.search_contact()
+                    query = input_search_query()
+                    results = self.phonebook.find_contacts(query)
+                    if results:
+                        print(f"Найдено {len(results)} совпадений:")
+                        show_all_contacts(results)
+                    else:
+                        print("Контактов не найдено.")
                 case "4":
-                    self.edit_contact()
+                    try:
+                        contact_id = input_contact_id()
+                        name = input(f"Имя [{self.phonebook.contacts[contact_id - 1].name}]: ")
+                        phone = input(f"Телефон [{self.phonebook.contacts[contact_id - 1].phone}]: ")
+                        comment = input(f"Комментарий [{self.phonebook.contacts[contact_id - 1].comment}]: ")
+                        self.phonebook.edit_contact(contact_id, name, phone, comment)
+                        self.changed = True
+                        print("Контакт успешно изменён.")
+                    except ContactNotFoundError as e:
+                        show_error(e)
                 case "5":
-                    self.delete_contact()
+                    try:
+                        contact_id = input_contact_id()
+                        self.phonebook.delete_contact(contact_id)
+                        self.changed = True
+                        print("Контакт успешно удалён.")
+                    except ContactNotFoundError as e:
+                        show_error(e)
                 case "6":
-                    self.save_and_exit()
+                    try:
+                        self.phonebook.save_contacts()
+                        print("Контакты успешно сохранены.")
+                    except FileWriteError as e:
+                        show_error(e)
+                    print("Выход из программы.")
                     break
                 case "7":
+                    if self.changed and not confirm_exit_without_saving():
+                        continue
                     print("Выход без сохранения.")
                     break
                 case _:
                     print("Неверный выбор. Попробуйте снова.")
-
-    def add_contact(self):
-        name, phone, comment = get_add_contact_input()
-        if not name or not phone:
-            raise InvalidContactDataError("Имя и телефон обязательны для заполнения.")
-        contact_id = len(self.contacts) + 1
-        contact = Contact(contact_id, name, phone, comment)
-        self.contacts.append(contact)
-        show_success("Контакт успешно добавлен.")
-
-    def edit_contact(self):
-        contact_id, new_name, new_phone, new_comment = get_edit_contact_input()
-        found = False
-        for contact in self.contacts:
-            if contact.id == contact_id:
-                contact.name = new_name or contact.name
-                contact.phone = new_phone or contact.phone
-                contact.comment = new_comment or contact.comment
-                found = True
-                show_success("Контакт обновлён.")
-                break
-        if not found:
-            raise ContactNotFoundError(f"Контакт с ID {contact_id} не найден.")
-
-    def delete_contact(self):
-        contact_id = get_delete_contact_id()
-        for i, contact in enumerate(self.contacts):
-            if contact.id == contact_id:
-                del self.contacts[i]
-                show_success("Контакт удалён.")
-                return
-        raise ContactNotFoundError(f"Контакт с ID {contact_id} не найден.")
-
-    def search_contact(self):
-        query = get_search_query().lower()
-        results = [
-            contact for contact in self.contacts
-            if query in contact.name.lower() or
-               query in contact.phone.lower() or
-               query in contact.comment.lower()
-        ]
-        if results:
-            display_contacts(results)
-        else:
-            show_error("Контакты не найдены.")
-
-    def save_and_exit(self):
-        try:
-            save_contacts(self.contacts)
-            show_success("Данные сохранены. Выход.")
-        except FileWriteError as e:
-            show_error(str(e))
