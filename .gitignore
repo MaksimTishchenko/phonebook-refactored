@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# JSON data file (optional, if you don't want to track it in Git)
+phonebook.json
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.njsproj
+*.sublime-project
+*.sublime-workspace
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
